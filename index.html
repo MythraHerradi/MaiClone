@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MaiClone | Lancer le projet</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Accueil MaiClone">
+          <span class="brand-mark">M</span>
+          <span>MaiClone</span>
+        </a>
+        <span class="status"><span class="status-dot"></span> serveur local</span>
+      </header>
+
+      <section class="intro">
+        <p class="eyebrow">MaiClone</p>
+        <h1>Lancer le projet.</h1>
+        <p class="intro-text">Configure une commande puis lance-la directement depuis cette page.</p>
+      </section>
+
+      <section class="runner" aria-label="Lanceur MaiClone">
+        <form id="run-form" class="form-panel">
+          <label>Action
+            <select id="action" name="action">
+              <option value="prepare">Préparer les données</option>
+              <option value="train">Entraîner le modèle</option>
+            </select>
+          </label>
+          <label>Archive Instagram (.zip)
+            <input id="archive" name="archive" type="file" accept=".zip,application/zip" required />
+          </label>
+          <label>Ton nom Instagram
+            <input id="target-name" name="targetName" placeholder="Ton nom exact" required />
+          </label>
+          <div id="prepare-fields">
+            <label>Fichier de sortie
+              <input name="output" value="data/training.jsonl" />
+            </label>
+          </div>
+          <div id="train-fields" hidden>
+            <label>Modèle de base
+              <input name="baseModel" value="microsoft/Phi-3-mini-4k-instruct" />
+            </label>
+            <label>Dossier du modèle
+              <input name="outputDir" value="models/maiclone" />
+            </label>
+            <div class="number-fields">
+              <label>Epochs <input name="epochs" type="number" min="1" value="1" /></label>
+              <label>Batch <input name="batchSize" type="number" min="1" value="1" /></label>
+            </div>
+          </div>
+          <button class="run-button" type="submit">Lancer le programme</button>
+        </form>
+
+        <div class="output-panel">
+          <div class="code-toolbar"><span>Sortie du programme</span><span id="run-status">En attente</span></div>
+          <pre id="output" class="output" aria-live="polite">Le résultat de la commande apparaîtra ici.</pre>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
