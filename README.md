@@ -1,5 +1,7 @@
 # MaiClone
 
+créer un clone de sois meme avec des archives de ses conversation sur les resaux sociaux
+
 A UV-ready Python project that turns your Instagram archive into training data and fine-tunes a chat model to mirror your tone, expressions, and language mix.
 
 ## Quick start
