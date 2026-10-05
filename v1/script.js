@@ -1,101 +1,61 @@
-const sidebar = document.querySelector('#sidebar');
-const messages = document.querySelector('#messages');
-const form = document.querySelector('#chat-form');
-const input = document.querySelector('#input');
-const send = document.querySelector('#send');
-const modelSelect = document.querySelector('#model');
-const temperature = document.querySelector('#temperature');
-const tempValue = document.querySelector('#temp-value');
-const statusText = document.querySelector('#status');
-const statusDot = document.querySelector('.dot');
+// Le serveur Python relaiera ce rapport vers Grist (la clé API reste côté serveur).
+const REPORT_ENDPOINT = '/api/report';
 
-const history = [];
+const form = document.querySelector('#report-form');
+const meta = document.querySelector('#meta');
+const result = document.querySelector('#result');
+const submit = document.querySelector('#submit');
 
-temperature.addEventListener('input', () => { tempValue.textContent = Number(temperature.value).toFixed(1); });
-document.querySelector('#toggle').addEventListener('click', () => sidebar.classList.toggle('open'));
-document.querySelector('#clear').addEventListener('click', () => {
-    history.length = 0;
-    messages.innerHTML = '';
-    addMessage('ai', 'Nouvelle conversation. Je t’écoute !');
-});
+const params = new URLSearchParams(location.search);
+if (params.get('type')) form.type.value = params.get('type');
+if (params.get('title')) form.title.value = params.get('title');
+if (params.get('details')) form.details.value = params.get('details');
 
-input.addEventListener('input', () => {
-    input.style.height = 'auto';
-    input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
-});
-input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        form.requestSubmit();
-    }
-});
-
-function setStatus(text, state = '') {
-    statusText.textContent = text;
-    statusDot.className = `dot ${state}`;
+function context() {
+    return {
+        referrer: document.referrer || null,
+        page: location.href,
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        sentAt: new Date().toISOString(),
+    };
 }
 
-function addMessage(role, text, extraClass = '') {
-    const wrapper = document.createElement('div');
-    wrapper.className = `msg ${role} ${extraClass}`.trim();
-    if (role === 'ai') {
-        const avatar = document.createElement('div');
-        avatar.className = 'avatar';
-        avatar.textContent = 'M';
-        wrapper.append(avatar);
-    }
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    if (text) bubble.textContent = text;
-    wrapper.append(bubble);
-    messages.append(wrapper);
-    messages.scrollTop = messages.scrollHeight;
-    return { wrapper, bubble };
-}
-
-function showTyping() {
-    const message = addMessage('ai', '');
-    message.bubble.innerHTML = '<span class="typing"><span></span><span></span><span></span></span>';
-    return message.wrapper;
-}
+meta.textContent = `Infos jointes automatiquement : navigateur, langue, page et date.`;
 
 form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const text = input.value.trim();
-    if (!text) return;
+    submit.disabled = true;
+    submit.textContent = 'Envoi...';
+    result.className = 'result';
+    result.textContent = '';
 
-    addMessage('user', text);
-    history.push({ role: 'user', content: text });
-    input.value = '';
-    input.style.height = 'auto';
-    send.disabled = true;
-    setStatus('MaiClone écrit…', 'busy');
-    const typing = showTyping();
+    const payload = {
+        type: form.type.value,
+        title: form.title.value.trim(),
+        details: form.details.value.trim(),
+        email: form.email.value.trim() || null,
+        context: context(),
+    };
 
     try {
-        const response = await fetch('/chat', {
+        const response = await fetch(REPORT_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                message: text,
-                history: history.slice(0, -1),
-                model: modelSelect.value,
-                temperature: Number(temperature.value),
-            }),
+            body: JSON.stringify(payload),
         });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || result.detail || `HTTP ${response.status}`);
-        const reply = result.reply ?? result.response ?? result.message ?? result.output ?? 'Aucune réponse.';
-        typing.remove();
-        addMessage('ai', reply);
-        history.push({ role: 'assistant', content: reply });
-        setStatus('prêt');
+        if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.error || body.detail || `HTTP ${response.status}`);
+        }
+        result.className = 'result ok';
+        result.textContent = 'Merci, le rapport a bien été envoyé.';
+        form.reset();
     } catch (error) {
-        typing.remove();
-        addMessage('ai', `Impossible d’obtenir une réponse.\n${error.message}`, 'error');
-        setStatus('erreur', 'err');
+        result.className = 'result err';
+        result.textContent = `Envoi impossible : ${error.message}`;
     } finally {
-        send.disabled = false;
-        input.focus();
+        submit.disabled = false;
+        submit.textContent = 'Envoyer le rapport';
     }
 });

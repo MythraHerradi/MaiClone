@@ -3,48 +3,52 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MaiClone | Chat</title>
+    <title>MaiClone | Signaler une erreur</title>
     <link rel="stylesheet" href="v1/style.css" />
   </head>
   <body>
-    <div class="app">
-      <aside class="sidebar" id="sidebar">
-        <div class="sidebar-head">
-          <a class="brand" href="./"><span class="brand-mark">M</span><span>MaiClone</span></a>
+    <main class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Accueil MaiClone">
+          <span class="brand-mark">M</span>
+          <span>MaiClone</span>
+        </a>
+        <a class="back" href="./">← Retour</a>
+      </header>
+
+      <section class="intro">
+        <p class="eyebrow">Support</p>
+        <h1>Signaler une erreur.</h1>
+        <p class="intro-text">Décris ce qui s'est passé. Le rapport est enregistré pour qu'on puisse le corriger.</p>
+      </section>
+
+      <form id="report-form" class="report">
+        <div class="row">
+          <label>Type d'erreur
+            <select name="type" id="type">
+              <option value="prepare">Préparation des données</option>
+              <option value="train">Entraînement</option>
+              <option value="server">Serveur injoignable</option>
+              <option value="ui">Interface</option>
+              <option value="other">Autre</option>
+            </select>
+          </label>
+          <label>Email (optionnel)
+            <input name="email" type="email" placeholder="toi@exemple.fr" />
+          </label>
         </div>
-        <h2>Réglages</h2>
-        <label>Modèle
-          <select id="model">
-            <option value="models/maiclone">models/maiclone (fine-tuné)</option>
-            <option value="microsoft/Phi-3-mini-4k-instruct">Phi-3 mini 4k instruct</option>
-          </select>
+        <label>Titre
+          <input name="title" id="title" placeholder="Ex : l'entraînement s'arrête à l'epoch 1" required />
         </label>
-        <label>Température <output id="temp-value">0.7</output>
-          <input id="temperature" type="range" min="0" max="2" step="0.1" value="0.7" />
+        <label>Détails / trace d'erreur
+          <textarea name="details" id="details" rows="8" placeholder="Colle ici le message ou la trace complète" required></textarea>
         </label>
-        <button id="clear" class="ghost" type="button">Nouvelle conversation</button>
-        <a class="ghost link" href="index0.html">Version 1 (Originale)</a>
-      </aside>
+        <p class="meta" id="meta"></p>
+        <button class="run-button" id="submit" type="submit">Envoyer le rapport</button>
+        <p class="result" id="result" aria-live="polite"></p>
+      </form>
+    </main>
 
-      <main class="chat">
-        <header class="chat-head">
-          <button id="toggle" class="icon" type="button" aria-label="Réglages">☰</button>
-          <div>
-            <strong>MaiClone</strong>
-            <span class="status"><span class="dot"></span><span id="status">prêt</span></span>
-          </div>
-        </header>
-
-        <section id="messages" class="messages" aria-live="polite">
-          <div class="msg ai"><div class="avatar">M</div><div class="bubble">Salut ! Écris-moi un message pour démarrer la conversation.</div></div>
-        </section>
-
-        <form id="chat-form" class="composer">
-          <textarea id="input" rows="1" placeholder="Écris ton message…" required></textarea>
-          <button id="send" type="submit" aria-label="Envoyer">Envoyer</button>
-        </form>
-      </main>
-    </div>
     <script src="v1/script.js"></script>
   </body>
 </html>
