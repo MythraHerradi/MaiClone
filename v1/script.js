@@ -1,6 +1,3 @@
-// Le serveur Python relaiera ce rapport vers Grist (la clé API reste côté serveur).
-const REPORT_ENDPOINT = '/api/report';
-
 const form = document.querySelector('#report-form');
 const meta = document.querySelector('#meta');
 const result = document.querySelector('#result');
@@ -21,41 +18,46 @@ function context() {
     };
 }
 
-meta.textContent = `Infos jointes automatiquement : navigateur, langue, page et date.`;
+function downloadReport(payload) {
+    const filename = `maiclone-report-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
+
+meta.textContent = 'Le rapport est créé localement puis téléchargé en JSON.';
 
 form.addEventListener('submit', async (event) => {
     event.preventDefault();
     submit.disabled = true;
-    submit.textContent = 'Envoi...';
+    submit.textContent = 'Création...';
     result.className = 'result';
     result.textContent = '';
 
-    const payload = {
-        type: form.type.value,
-        title: form.title.value.trim(),
-        details: form.details.value.trim(),
-        email: form.email.value.trim() || null,
-        context: context(),
-    };
-
     try {
-        const response = await fetch(REPORT_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        if (!response.ok) {
-            const body = await response.json().catch(() => ({}));
-            throw new Error(body.error || body.detail || `HTTP ${response.status}`);
-        }
+        const payload = {
+            type: form.type.value,
+            title: form.title.value.trim(),
+            details: form.details.value.trim(),
+            email: form.email.value.trim() || null,
+            context: context(),
+        };
+
+        downloadReport(payload);
         result.className = 'result ok';
-        result.textContent = 'Merci, le rapport a bien été envoyé.';
+        result.textContent = 'Rapport généré et téléchargé avec succès.';
         form.reset();
     } catch (error) {
         result.className = 'result err';
-        result.textContent = `Envoi impossible : ${error.message}`;
+        result.textContent = `Création impossible : ${error.message}`;
     } finally {
         submit.disabled = false;
-        submit.textContent = 'Envoyer le rapport';
+        submit.textContent = 'Créer le rapport';
     }
 });

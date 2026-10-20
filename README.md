@@ -1,41 +1,21 @@
 # MaiClone
 
-créer un clone de sois meme avec des archives de ses conversation sur les resaux sociaux
+Version frontend 100% **HTML / CSS / JavaScript**.
 
-A UV-ready Python project that turns your Instagram archive into training data and fine-tunes a chat model to mirror your tone, expressions, and language mix.
+Cette version ne dépend plus d'un serveur Python pour l'interface :
+- la page principale prépare les paramètres localement dans le navigateur ;
+- la page de signalement génère un rapport `.json` téléchargeable.
 
-## Quick start
+## Lancer le projet
 
-```bash
-uv venv
-uv sync
-```
+Ouvre directement le fichier `/home/runner/work/MaiClone/MaiClone/index.html` dans ton navigateur.
 
-## Build dataset from your Instagram archive
+## Pages
 
-```bash
-uv run maiclone prepare \
-  --archive /path/to/instagram-archive \
-  --target-name "Your Instagram Name" \
-  --output data/training.jsonl
-```
+- `index.html` : configuration de l'action (prepare/train) et aperçu des paramètres.
+- `index1.html` : création locale d'un rapport d'erreur en JSON.
 
-## Fine-tune with LoRA
+## Structure frontend
 
-Install training deps once:
-
-```bash
-uv sync --extra train
-```
-
-Then train:
-
-```bash
-uv run maiclone train \
-  --archive /path/to/instagram-archive \
-  --target-name "Your Instagram Name" \
-  --base-model "microsoft/Phi-3-mini-4k-instruct" \
-  --output-dir models/maiclone
-```
-
-This keeps your archive format unchanged and extracts conversational examples where your messages become the target style for the model.
+- `v0/style.css` + `v0/script.js` : interface principale.
+- `v1/style.css` + `v1/script.js` : interface de rapport.
