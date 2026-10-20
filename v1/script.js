@@ -2,6 +2,7 @@ const form = document.querySelector('#report-form');
 const meta = document.querySelector('#meta');
 const result = document.querySelector('#result');
 const submit = document.querySelector('#submit');
+const ISSUE_URL = 'https://github.com/MythraHerradi/MaiClone/issues/new';
 
 const params = new URLSearchParams(location.search);
 if (params.get('type')) form.type.value = params.get('type');
@@ -18,20 +19,34 @@ function context() {
     };
 }
 
-function downloadReport(payload) {
-    const filename = `maiclone-report-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+function buildIssueUrl(payload) {
+    const lines = [
+        '## Type',
+        payload.type,
+        '',
+        '## Détails',
+        payload.details,
+        '',
+        '## Contact',
+        payload.email || 'Non fourni',
+        '',
+        '## Contexte',
+        `- Page: ${payload.context.page}`,
+        `- Referrer: ${payload.context.referrer || 'Aucun'}`,
+        `- User agent: ${payload.context.userAgent}`,
+        `- Langue: ${payload.context.language}`,
+        `- Horodatage: ${payload.context.sentAt}`,
+    ];
+
+    const params = new URLSearchParams({
+        title: `[Bug] ${payload.title}`,
+        body: lines.join('\n'),
+    });
+
+    return `${ISSUE_URL}?${params.toString()}`;
 }
 
-meta.textContent = 'Le rapport est créé localement puis téléchargé en JSON.';
+meta.textContent = 'Le rapport ouvre automatiquement un nouvel issue GitHub pré-rempli.';
 
 form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -49,15 +64,19 @@ form.addEventListener('submit', async (event) => {
             context: context(),
         };
 
-        downloadReport(payload);
+        const issueUrl = buildIssueUrl(payload);
+        const openedWindow = window.open(issueUrl, '_blank', 'noopener,noreferrer');
+        if (!openedWindow) {
+            throw new Error('popup bloquée. Autorise les popups puis réessaie');
+        }
         result.className = 'result ok';
-        result.textContent = 'Rapport généré et téléchargé avec succès.';
+        result.textContent = 'Issue GitHub ouverte automatiquement avec ton rapport.';
         form.reset();
     } catch (error) {
         result.className = 'result err';
         result.textContent = `Création impossible : ${error.message}`;
     } finally {
         submit.disabled = false;
-        submit.textContent = 'Créer le rapport';
+        submit.textContent = 'Ouvrir l\'issue GitHub';
     }
 });
