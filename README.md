@@ -78,11 +78,14 @@ Output:
 
 ## Frontend usage
 
-This frontend is static and does not require a backend server.
-
 - Open `/home/runner/work/MaiClone/MaiClone/index.html` in your browser.
 - `index.html`: configure prepare/train parameters locally.
-- `index1.html`: generate a local `.json` report file.
+- `index1.html`: send an error report in background via `/api/report`.
+
+To enable automatic GitHub issue creation from `index1.html`, start `server.py` with:
+- `GITHUB_TOKEN` (required): token with issue write access on the repository
+- `GITHUB_OWNER` (optional, default `MythraHerradi`)
+- `GITHUB_REPO` (optional, default `MaiClone`)
 
 ## Run tests
 

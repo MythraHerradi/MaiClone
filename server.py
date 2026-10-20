@@ -5,6 +5,8 @@ import os
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 import zipfile
 from email import policy
 from email.parser import BytesParser
@@ -14,6 +16,8 @@ from urllib.parse import urlparse
 
 
 ROOT = Path(__file__).parent.resolve()
+GITHUB_OWNER = os.environ.get("GITHUB_OWNER", "MythraHerradi")
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "MaiClone")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -38,22 +42,43 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self) -> None:
-        if urlparse(self.path).path != "/api/run":
-            self.send_error(404)
+        path = urlparse(self.path).path
+        if path == "/api/run":
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                body = self.rfile.read(length)
+                if self.headers.get_content_type() == "multipart/form-data":
+                    data, archive = self.parse_upload(body)
+                    with tempfile.TemporaryDirectory(prefix="maiclone-") as directory:
+                        archive_root = self.extract_archive(archive, Path(directory))
+                        self.run_command(data, archive_root)
+                else:
+                    self.run_command(json.loads(body), None)
+            except (KeyError, TypeError, ValueError, zipfile.BadZipFile) as error:
+                self.send_json(400, {"ok": False, "output": str(error)})
             return
 
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-            body = self.rfile.read(length)
-            if self.headers.get_content_type() == "multipart/form-data":
-                data, archive = self.parse_upload(body)
-                with tempfile.TemporaryDirectory(prefix="maiclone-") as directory:
-                    archive_root = self.extract_archive(archive, Path(directory))
-                    self.run_command(data, archive_root)
-            else:
-                self.run_command(json.loads(body), None)
-        except (KeyError, TypeError, ValueError, zipfile.BadZipFile) as error:
-            self.send_json(400, {"ok": False, "output": str(error)})
+        if path == "/api/report":
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                body = self.rfile.read(length)
+                data = json.loads(body or b"{}")
+                issue_number = self.create_github_issue(data)
+                self.send_json(
+                    200,
+                    {
+                        "ok": True,
+                        "output": "Issue créée avec succès.",
+                        "issueNumber": issue_number,
+                    },
+                )
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+                self.send_json(400, {"ok": False, "output": str(error)})
+            except RuntimeError as error:
+                self.send_json(502, {"ok": False, "output": str(error)})
+            return
+
+        self.send_error(404)
 
     def parse_upload(self, body: bytes) -> tuple[dict[str, str], bytes]:
         content_type = self.headers.get("Content-Type", "")
@@ -112,6 +137,73 @@ class Handler(BaseHTTPRequestHandler):
                 "command": " ".join(command),
             },
         )
+
+    @staticmethod
+    def create_github_issue(data: dict[str, object]) -> int:
+        title = str(data.get("title", "")).strip()
+        details = str(data.get("details", "")).strip()
+        issue_type = str(data.get("type", "")).strip() or "other"
+        email = str(data.get("email", "")).strip() or "Non fourni"
+        context = data.get("context") if isinstance(data.get("context"), dict) else {}
+        page = str(context.get("page", "inconnu")).strip() or "inconnu"
+        referrer = str(context.get("referrer", "Aucun")).strip() or "Aucun"
+        user_agent = str(context.get("userAgent", "inconnu")).strip() or "inconnu"
+        language = str(context.get("language", "inconnue")).strip() or "inconnue"
+        sent_at = str(context.get("sentAt", "inconnu")).strip() or "inconnu"
+
+        if not title or not details:
+            raise ValueError("Le titre et les détails sont obligatoires")
+
+        token = os.environ.get("GITHUB_TOKEN", "").strip()
+        if not token:
+            raise RuntimeError("Le serveur n'est pas configuré: GITHUB_TOKEN manquant")
+
+        issue_title = f"[Bug] {title}"
+        issue_body = "\n".join(
+            [
+                "## Type",
+                issue_type,
+                "",
+                "## Détails",
+                details,
+                "",
+                "## Contact",
+                email,
+                "",
+                "## Contexte",
+                f"- Page: {page}",
+                f"- Referrer: {referrer}",
+                f"- User agent: {user_agent}",
+                f"- Langue: {language}",
+                f"- Horodatage: {sent_at}",
+            ]
+        )
+        payload = json.dumps({"title": issue_title, "body": issue_body}).encode("utf-8")
+        request = urllib.request.Request(
+            f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/issues",
+            data=payload,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": "Bearer " + token,
+                "Content-Type": "application/json",
+                "User-Agent": "MaiClone-Error-Reporter",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                issue = json.loads(response.read().decode("utf-8"))
+                number = issue.get("number")
+                if not isinstance(number, int):
+                    raise RuntimeError("Réponse GitHub invalide")
+                return number
+        except urllib.error.HTTPError as error:
+            details = error.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"GitHub a refusé la création d'issue ({error.code}): {details}"
+            ) from error
+        except urllib.error.URLError as error:
+            raise RuntimeError(f"Impossible de joindre GitHub: {error.reason}") from error
 
     @staticmethod
     def build_command(
